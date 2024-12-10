@@ -3,3 +3,6 @@
 /dist/
 /svywidget.zip
 /.angular/
+
+#Add ds_store git gitignore (mac files)
+.DS_Store
