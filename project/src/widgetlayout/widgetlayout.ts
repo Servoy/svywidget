@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef } from '@angular/core';
+import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef, CSP_NONCE } from '@angular/core';
 import { BaseCustomObject, ServoyBaseComponent, ServoyPublicService } from '@servoy/public';
 import { GridStack, GridStackOptions, GridStackWidget, GridStackNode} from 'gridstack';
 import { GridstackComponent } from 'gridstack/dist/angular';
@@ -37,6 +37,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     public gridOptions: GridStackOptions = {
         column: 12,
         minRow: 1,
+        nonce: this.nonce,
         float: true,
         columnOpts: {
             layout: 'compact',
@@ -44,8 +45,8 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         }
       }
     
-    constructor(protected readonly renderer: Renderer2, protected cdRef: ChangeDetectorRef, @Inject(DOCUMENT) private document: Document,
-    private servoyPublic: ServoyPublicService) {
+    constructor(protected readonly renderer: Renderer2, protected cdRef: ChangeDetectorRef, @Inject(DOCUMENT,) private document: Document,
+    private servoyPublic: ServoyPublicService, @Inject(CSP_NONCE) private nonce: string) {
          super(renderer, cdRef);
     }
     
