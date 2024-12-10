@@ -1,0 +1,17 @@
+{
+  "name": "svywidget",
+  "version": "2024.9.0",
+  "peerDependencies": {
+    "@angular/animations": "^18",
+    "@angular/common": "^18",
+    "@angular/core": "^18",
+    "@angular/forms": "^18"
+  },
+  "dependencies": {
+    "tslib": "*",
+    "gridstack": "^10.3.1"
+  },
+  "license": "MIT",
+  "repository": {
+  }
+}
