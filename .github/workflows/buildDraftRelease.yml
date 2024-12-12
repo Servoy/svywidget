@@ -67,7 +67,7 @@ jobs:
       
     - name: Create release
       run: |
-        gh release create "_${{ github.ref_name }}" --target "${{ env.BRANCH_NAME }}" --prerelease --title "Nighlty Build ${{ env.BRANCH_NAME }}" --notes "Nightly build. Branch: ${{ env.BRANCH_NAME }} Commit: ${{ github.sha }} Package Version: ${{ env.PACKAGE_VERSION }}"
+        gh release create "_${{ github.ref_name }}" --target "${{ env.BRANCH_NAME }}" --generate-notes --prerelease --title "Nighlty Build ${{ env.BRANCH_NAME }}" --notes "Nightly build. Branch: ${{ env.BRANCH_NAME }} Commit: ${{ github.sha }} Package Version: ${{ env.PACKAGE_VERSION }}"
         echo "release_exists=true" >> $GITHUB_ENV
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
