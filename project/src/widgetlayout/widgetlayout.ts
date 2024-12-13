@@ -150,11 +150,19 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                     this.displayWidgets.push(newWidget);
                 });
             });
-    
+
             Promise.all(promises).then(() => {
                 this.loadedWidgets = this.widgets;
                 this.cdRef.detectChanges();
                 this.updateWidgetRefs(this.getCurrentLayout());
+                setTimeout(() => {
+                    this.gridComp.grid.getGridItems().forEach(widget => {
+                        if(this.loadedWidgets.find(w => w.id === widget.id)?.sizeToContent) {
+                            this.gridComp.grid.resizeToContent(widget);
+                        }
+                    })
+                }, 50);
+
                 if(this.onLayoutChange) {
                     this.onLayoutChange(this.createJSEvent(), this.getCurrentLayout());
                 }
