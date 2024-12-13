@@ -36,7 +36,7 @@ jobs:
     - name: Install and build component
       working-directory: ${{ env.COMPONENT_DIR }}
       run: |
-        npm install
+        npm install || (echo "Initial npm install failed, cleaning cache and retrying..." && npm cache clean --force && npm install)
         npm run make_release
 
     - name: Extract version number
