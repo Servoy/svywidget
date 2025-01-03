@@ -66,7 +66,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 const change = changes[property];
                 switch (property) {
                     case 'widgets':
-                        if(!this.haveSameIds(this.loadedWidgets, this.widgets)) {
+                        if(!this.hasChangesForRerender(this.loadedWidgets, this.widgets)) {
                             if(this.widgetBuilder) {
                                 clearTimeout(this.widgetBuilder);
                             }
@@ -148,21 +148,13 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                     newWidget.noMove = widget.noMove;
                     newWidget.noResize = widget.noResize;
                     this.displayWidgets.push(newWidget);
+                    this.loadedWidgets.push(widget);
                 });
             });
 
             Promise.all(promises).then(() => {
-                this.loadedWidgets = this.widgets;
-                this.cdRef.detectChanges();
-                this.updateWidgetRefs(this.getCurrentLayout());
-                setTimeout(() => {
-                    this.gridComp.grid.getGridItems().forEach(widget => {
-                        if(this.loadedWidgets.find(w => w.id === widget.id)?.sizeToContent) {
-                            this.gridComp.grid.resizeToContent(widget);
-                        }
-                    })
-                }, 50);
-
+                //Resize all widgets that have resizeToContent enabled
+                this.resizeToContentWidgetsToFit();
                 if(this.onLayoutChange) {
                     this.onLayoutChange(this.createJSEvent(), this.getCurrentLayout());
                 }
@@ -171,12 +163,8 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     }
     
     private createJSEvent() {
-        const element = this.gridElement.nativeElement;
-        const x = element.offsetLeft;
-        const y = element.offsetTop;
-
         const event = this.document.createEvent('MouseEvents');
-        event.initMouseEvent('click', false, true, window, 1, x, y, x, y, false, false, false, false, 0, null);
+        event.initMouseEvent('click', false, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
         return event;
     }
 
@@ -184,10 +172,10 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         items.forEach(item => {
             let matchingWidget = this.widgets?.find(widget => widget.id === item.id);
             if(matchingWidget) {
-                matchingWidget.posX = item.x||item.posX;
-                matchingWidget.posY = item.y||item.posY;
-                matchingWidget.width = item.w||item.width||item.minW;
-                matchingWidget.height = item.h||item.height||item.minH;
+                matchingWidget.posX = this.getDocumentAttribute(item.id, 'gs-x') || item.x || item.posX;
+                matchingWidget.posY = this.getDocumentAttribute(item.id, 'gs-y') || item.y || item.posY;
+                matchingWidget.width = this.getDocumentAttribute(item.id, 'gs-w') || item.w || item.width || item.minW;
+                matchingWidget.height = this.getDocumentAttribute(item.id, 'gs-h') || item.h || item.height || item.minH;
             }
         });
         this.notifyChange();
@@ -219,10 +207,10 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         currentLayout.forEach(widget => {
             returnLayout.push({
                 id: widget.id,
-                posX: widget.x,
-                posY: widget.y,
-                width: widget.w,
-                height: widget.h,
+                posX: this.getDocumentAttribute(widget.id, 'gs-x') || widget.x,
+                posY: this.getDocumentAttribute(widget.id, 'gs-y') || widget.y,
+                width: this.getDocumentAttribute(widget.id, 'gs-w') || widget.w,
+                height: this.getDocumentAttribute(widget.id, 'gs-h') || widget.h,
                 minH: widget.minH,
                 minW: widget.minW,
                 noMove: !!widget.noMove,
@@ -233,19 +221,41 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         })
         return returnLayout
     }
+
+
+    public resizeToContentWidgetsToFit() {
+        this.gridComp.grid.getGridItems().forEach(widget => {
+            if(this.loadedWidgets.find(w => w.id === widget.id)?.sizeToContent) {
+                this.gridComp.grid.resizeToContent(widget);
+            }
+        })
+        this.updateWidgetRefs(this.getCurrentLayout());
+    }
+
+    private getDocumentAttribute(elementId, attibute) {
+        const element = document.getElementById(elementId);
+        if (!element) 
+            return null;
+
+        const gsIntAttribute = element.getAttribute(attibute);
+        return gsIntAttribute ? parseInt(gsIntAttribute, 10) : null;
+    }
     
-    private haveSameIds(objA: WidgetLayout[], objB: WidgetLayout[]): boolean {
+    private hasChangesForRerender(objA: WidgetLayout[], objB: WidgetLayout[]): boolean {
         const getIds = (arr: WidgetLayout[]) => arr.map(item => item.id).sort();
+        const getForms = (arr: WidgetLayout[]) => arr.map(item => item.form).sort();
         
         const loadedWidgetIds = getIds(objA);
+        const loadedWidgetForms = getForms(objA);
         const widgetIds = getIds(objB);
+        const widgetForms = getForms(objB);
 
         if (loadedWidgetIds.length !== widgetIds.length) {
-        return false;
+            return false;
         }
 
         // Check if every element in both sorted arrays are the same
-        return loadedWidgetIds.every((id, index) => id === widgetIds[index]);
+        return loadedWidgetIds.every((id, index) => id === widgetIds[index]) && loadedWidgetForms.every((form, index) => form === widgetForms[index]);
     }
 }
 
@@ -292,5 +302,3 @@ export class rowSettings extends BaseCustomObject {
     minRows: number;
     maxRows: number;
 }
-//https://github.com/gridstack/gridstack.js/blob/master/angular/projects/demo/src/app/app.component.html
-//https://gridstackjs.com/demo/static.html#

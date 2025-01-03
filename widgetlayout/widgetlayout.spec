@@ -18,6 +18,10 @@
     "api": {
         "getCurrentLayout": {
             "returns": "widget[]"
+        },
+        "resizeToContentWidgetsToFit": {
+            "async": true,
+            "delayUntilFormLoads": true
         }
     },
     "handlers": {
