@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "tslib": "*",
-    "gridstack": "^10.3.1"
+    "gridstack": "^11.2.0"
   },
   "license": "MIT",
   "repository": {
