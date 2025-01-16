@@ -158,6 +158,10 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 if(this.onLayoutChange) {
                     this.onLayoutChange(this.createJSEvent(), this.getCurrentLayout());
                 }
+
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                }, 50);  
             });
         })
     }
