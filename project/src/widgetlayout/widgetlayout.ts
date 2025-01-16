@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef, CSP_NONCE } from '@angular/core';
-import { BaseCustomObject, ServoyBaseComponent, ServoyPublicService } from '@servoy/public';
+import { ICustomObjectValue, ServoyBaseComponent, ServoyPublicService } from '@servoy/public';
 import { GridStack, GridStackOptions, GridStackWidget, GridStackNode} from 'gridstack';
 import { GridstackComponent } from 'gridstack/dist/angular';
 
