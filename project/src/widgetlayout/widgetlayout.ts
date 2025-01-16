@@ -261,7 +261,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
 interface WidgetLayout {
     id?: string;
-    form?: string;
+    form?: any;
     minH?: number;
     minW?: number;
     posX?: number;
@@ -273,10 +273,10 @@ interface WidgetLayout {
     noMove?: boolean;
 }
 
-export class Widget extends BaseCustomObject {
+interface Widget extends ICustomObjectValue {
     id: string;
-    form: string;
-    relationName: string;
+    form: any;
+    relationName: any;
     minH: number;
     minW: number;
     posX: number;
@@ -290,14 +290,14 @@ export class Widget extends BaseCustomObject {
     noMove: boolean;
 }
 
-export class margin extends BaseCustomObject {
+interface margin extends ICustomObjectValue {
     top: number;
     right: number;
     bottom: number;
     left: number;
 }
 
-export class rowSettings extends BaseCustomObject {
+interface rowSettings extends ICustomObjectValue {
     rowHeight: number;
     minRows: number;
     maxRows: number;
