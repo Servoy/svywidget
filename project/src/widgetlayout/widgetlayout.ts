@@ -66,14 +66,8 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 const change = changes[property];
                 switch (property) {
                     case 'widgets':
-                        if(!this.hasChangesForRerender(this.loadedWidgets, this.widgets)) {
-                            if(this.widgetBuilder) {
-                                clearTimeout(this.widgetBuilder);
-                            }
-                            this.widgetBuilder = setTimeout(() => {
-                                this.widgetBuilder = null;
-                                this.initWidgets();    
-                            }, 100);
+                        if(this.hasChangesForRerender(this.loadedWidgets, this.widgets)) {
+                            this.initWidgets();
                         }
                         
                         break;
@@ -104,9 +98,6 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     ngOnDestroy() {
         super.ngOnDestroy();
-        if(this.widgetBuilder) {
-            clearTimeout(this.widgetBuilder);
-        }
         this.loadedWidgets.map(widget => this.servoyApi.hideForm(widget.form, widget.relationName));
         if(this.grid) {
             this.grid.destroy();
@@ -117,10 +108,13 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 		this.widgetsChange.emit(this.widgets);
 	}
     initWidgets() {
-        let destroyPromises = this.loadedWidgets.map(widget => this.servoyApi.hideForm(widget.form, widget.relationName));
+        //Clear UI before triggering hideForm
+        this.displayWidgets = [];
+        let destroyPromises = this.loadedWidgets.map(widget => {
+            this.servoyApi.hideForm(widget.form, widget.relationName)
+        });
         Promise.all(destroyPromises).then(() => {
             this.loadedWidgets = [];
-            this.displayWidgets = [];
         }).then(() => {
             let promises = this.widgets.map(widget => {
                 if(!widget.form) {
@@ -207,7 +201,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
         let returnLayout:WidgetLayout[] = [];
         /**@type {Array<{x: Number, y: Number, w: Number, h: Number, id: string}>} */
-        let currentLayout = JSON.parse(JSON.stringify(this.gridComp.grid.save()));
+        let currentLayout = JSON.parse(JSON.stringify(this.gridComp.grid.save(false)));
         currentLayout.forEach(widget => {
             returnLayout.push({
                 id: widget.id,
@@ -255,11 +249,11 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         const widgetForms = getForms(objB);
 
         if (loadedWidgetIds.length !== widgetIds.length) {
-            return false;
+            return true;
         }
 
         // Check if every element in both sorted arrays are the same
-        return loadedWidgetIds.every((id, index) => id === widgetIds[index]) && loadedWidgetForms.every((form, index) => form === widgetForms[index]);
+        return !loadedWidgetIds.every((id, index) => id === widgetIds[index]) && loadedWidgetForms.every((form, index) => form === widgetForms[index]);
     }
 }
 

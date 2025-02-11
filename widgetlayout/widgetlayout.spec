@@ -17,6 +17,7 @@
     },
     "api": {
         "getCurrentLayout": {
+            "delayUntilFormLoads": true,
             "returns": "widget[]"
         },
         "resizeToContentWidgetsToFit": {
