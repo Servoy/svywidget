@@ -253,7 +253,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         }
 
         // Check if every element in both sorted arrays are the same
-        return !loadedWidgetIds.every((id, index) => id === widgetIds[index]) && loadedWidgetForms.every((form, index) => form === widgetForms[index]);
+        return !loadedWidgetIds.every((id, index) => id === widgetIds[index]) && !loadedWidgetForms.every((form, index) => form === widgetForms[index]);
     }
 }
 
