@@ -67,7 +67,13 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 switch (property) {
                     case 'widgets':
                         if(this.hasChangesForRerender(this.loadedWidgets, this.widgets)) {
-                            this.initWidgets();
+                            if(this.widgetBuilder) {
+                                clearTimeout(this.widgetBuilder);
+                            }
+                            this.widgetBuilder = setTimeout(() => {
+                                this.widgetBuilder = null;
+                                this.initWidgets();    
+                            }, 100);
                         }
                         
                         break;
@@ -98,6 +104,9 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     ngOnDestroy() {
         super.ngOnDestroy();
+        if(this.widgetBuilder) {
+            clearTimeout(this.widgetBuilder);
+        }
         this.loadedWidgets.map(widget => this.servoyApi.hideForm(widget.form, widget.relationName));
         if(this.grid) {
             this.grid.destroy();
