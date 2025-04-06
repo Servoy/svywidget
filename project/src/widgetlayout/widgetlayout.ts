@@ -118,6 +118,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 	}
     initWidgets() {
         //Clear UI before triggering hideForm
+        this.gridComp.grid.removeAll(true, false);
         this.displayWidgets = [];
         let destroyPromises = this.loadedWidgets.map(widget => {
             this.servoyApi.hideForm(widget.form, widget.relationName)
