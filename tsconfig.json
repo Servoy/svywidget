@@ -16,10 +16,9 @@
     "target": "ES2022",
     "module": "es2020",
     "lib": [
-      "es2018",
+      "es2022",
       "dom",
-      "dom.Iterable",
-      "ES2020.Promise"
+      "dom.iterable"
     ],
     "useDefineForClassFields": false
   },

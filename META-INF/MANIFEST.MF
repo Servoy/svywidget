@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-Name: svywidget
 Bundle-SymbolicName: svywidget
 Package-Type: Web-Component
-Bundle-Version: 2024.12.0
+Bundle-Version: 2025.03.0
 NPM-PackageName: svywidget
 NG2-Module: svywidgetModule
 NG2-CSS-ClientLibs: ~/svywidget/assets/svywidget.css
