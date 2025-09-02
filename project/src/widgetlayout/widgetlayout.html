@@ -1,22 +1,23 @@
-<gridstack #element 
-    class="grid-stack" 
-    [id]="servoyApi.getMarkupId()"
-    [options]="gridOptions"
-    [ngClass]="styleClass"
-    >
+<gridstack #element
+  class="grid-stack"
+  [id]="servoyApi.getMarkupId()"
+  [options]="gridOptions"
+  [ngClass]="styleClass"
+  >
+  @for (renderWidget of displayWidgets; track identify($index, renderWidget)) {
     <gridstack-item
-        *ngFor="let renderWidget of displayWidgets; trackBy: identify"
-        [options]="renderWidget"
-        id="{{renderWidget.id}}"
-        [ngClass]="widgetItemClass"
+      [options]="renderWidget"
+      id="{{renderWidget.id}}"
+      [ngClass]="widgetItemClass"
+      >
+      <div
+        id="{{renderWidget.id}}-container"
+        [ngClass]="getProperty(renderWidget, 'widgetItemContainerClass')"
+        (click)="onWidgetClickHandler($event, renderWidget.id)"
         >
-        <div
-            id="{{renderWidget.id}}-container"
-            [ngClass]="getProperty(renderWidget, 'widgetItemContainerClass')"
-            (click)="onWidgetClickHandler($event, renderWidget.id)"
-            >
-            <ng-template [ngTemplateOutlet]="templateRef" [ngTemplateOutletContext]="{name:getProperty(renderWidget, 'form')}"></ng-template>
-        </div>
+        <ng-template [ngTemplateOutlet]="templateRef" [ngTemplateOutletContext]="{name:getProperty(renderWidget, 'form')}"></ng-template>
+      </div>
     </gridstack-item>
+  }
 
 </gridstack>
