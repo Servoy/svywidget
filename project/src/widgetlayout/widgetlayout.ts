@@ -89,9 +89,9 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                     break;
                     case 'rowSettings':
                         if(this.rowSettings.rowHeight == -1) {
-                            this.gridComp.grid.cellHeight('auto', true);
+                            this.gridComp.grid.cellHeight('auto');
                         } else {
-                            this.gridComp.grid.cellHeight(this.rowSettings.rowHeight, true);
+                            this.gridComp.grid.cellHeight(this.rowSettings.rowHeight);
                         }
                     break;
                     case 'widgetMargin':
@@ -163,10 +163,6 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 if(this.onLayoutChange) {
                     this.onLayoutChange(this.createJSEvent(), this.getCurrentLayout());
                 }
-
-                setTimeout(() => {
-                    window.dispatchEvent(new Event('resize'));
-                }, 50);  
             });
         })
     }
