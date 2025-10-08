@@ -1,6 +1,6 @@
 {
   "name": "svywidget",
-  "version": "2025.03.0",
+  "version": "2025.09.0",
   "peerDependencies": {
     "@angular/animations": "^19",
     "@angular/common": "^19",
