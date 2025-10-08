@@ -1,7 +1,7 @@
 
-import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef, CSP_NONCE, DOCUMENT, input, output } from '@angular/core';
+import { Component, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, ElementRef, CSP_NONCE, DOCUMENT, input, output } from '@angular/core';
 import { ICustomObjectValue, ServoyBaseComponent, ServoyPublicService } from '@servoy/public';
-import { GridStack, GridStackOptions, GridStackWidget, GridStackNode} from 'gridstack';
+import { GridStack, GridStackOptions, GridStackWidget } from 'gridstack';
 import { GridstackComponent } from 'gridstack/dist/angular';
 
 @Component({
@@ -30,11 +30,10 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     @ContentChild(TemplateRef, { static: true })
 	templateRef: TemplateRef<any>;
     
-    private loadedWidgets: Widget[] = [];
+    private loadedWidgetsMap = new Map<string, Widget>();
     private widgetBuilder = null;
     private grid: GridStack;
     public widgetItemClass = "";
-    public displayWidgets: GridStackWidget[] = [];
     public gridOptions: GridStackOptions = {
         column: 12,
         minRow: 1,
@@ -62,7 +61,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 const change = changes[property];
                 switch (property) {
                     case 'widgets':
-                        if(this.hasChangesForRerender(this.loadedWidgets, this.widgets())) {
+                        if(this.hasChangesForRerender(Array.from(this.loadedWidgetsMap.values()), this.widgets())) {
                             if(this.widgetBuilder) {
                                 clearTimeout(this.widgetBuilder);
                             }
@@ -106,7 +105,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         if(this.widgetBuilder) {
             clearTimeout(this.widgetBuilder);
         }
-        this.loadedWidgets.map(widget => this.servoyApi.hideForm(widget.form, widget.relationName));
+        Array.from(this.loadedWidgetsMap.values()).map(widget => this.servoyApi.hideForm(widget.form, widget.relationName));
         if(this.grid) {
             this.grid.destroy();
         }
@@ -115,17 +114,16 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     private notifyChange() {
 		this.widgetsChange.emit(this.widgets());
 	}
-    
+
     initWidgets() {
         //Clear UI before triggering hideForm
         this.removeOnChangeEvents();
         this.gridComp.grid.removeAll(true, false);
-        this.displayWidgets = [];
-        let destroyPromises = this.loadedWidgets.map(widget => {
+        let destroyPromises = Array.from(this.loadedWidgetsMap.values()).map(widget => {
             this.servoyApi.hideForm(widget.form, widget.relationName)
         });
         Promise.all(destroyPromises).then(() => {
-            this.loadedWidgets = [];
+            this.loadedWidgetsMap.clear();
         }).then(() => {
             let promises = this.widgets().map(widget => {
                 if(!widget.form) {
@@ -157,8 +155,10 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                     newWidget.sizeToContent = widget.sizeToContent;
                     newWidget.noMove = widget.noMove;
                     newWidget.noResize = widget.noResize;
-                    this.displayWidgets.push(newWidget);
-                    this.loadedWidgets.push(widget);
+                    
+                    // Store widget with GridStack properties for easy access
+                    widget.gridStackWidget = newWidget;
+                    this.loadedWidgetsMap.set(widget.id, widget);
                 });
             });
 
@@ -184,7 +184,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     private updateWidgetRefs(items: WidgetLayout[]) {
         items.forEach(item => {
-            let matchingWidget = this.widgets()?.find(widget => widget.id === item.id);
+            const matchingWidget = this.loadedWidgetsMap.get(item.id);
             if(matchingWidget) {
                 matchingWidget.posX = item.posX;
                 matchingWidget.posY = item.posY;
@@ -203,7 +203,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     }
 
     public getProperty(renderWidget: GridStackWidget, propertyName:string) {
-        let matchingWidget = this.widgets()?.find(widget => widget.id === renderWidget.id);
+        const matchingWidget = this.loadedWidgetsMap.get(renderWidget.id);
 		if (matchingWidget && matchingWidget[propertyName]) {
 			return matchingWidget[propertyName];
 		} else {
@@ -213,7 +213,12 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     public identify(index: number, renderWidget: GridStackWidget) {
         return renderWidget.id; // or use index if no id is set and you only modify at the end...
-      }
+    }
+
+    // Expose display widgets from Map as array for template iteration
+    public get displayWidgets(): GridStackWidget[] {
+        return Array.from(this.loadedWidgetsMap.values()).map(widget => widget.gridStackWidget).filter(Boolean);
+    }
 
     public getCurrentLayout():WidgetLayout[] {
         return this.gridComp.gridstackItems?.map(item => ({
@@ -233,7 +238,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     public resizeToContentWidgetsToFit() {
         this.gridComp.grid.getGridItems().forEach(widget => {
-            const loadedWidget = this.loadedWidgets.find(w => w.id === widget.id);
+            const loadedWidget = this.loadedWidgetsMap.get(widget.id);
             if(loadedWidget?.sizeToContent) {
                 this.gridComp.grid.resizeToContent(widget);
             }
@@ -301,6 +306,7 @@ interface Widget extends ICustomObjectValue {
     sizeToContent: boolean;
     noResize: boolean;
     noMove: boolean;
+    gridStackWidget?: GridStackWidget;
 }
 
 interface margin extends ICustomObjectValue {
