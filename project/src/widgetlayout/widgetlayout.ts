@@ -1,5 +1,5 @@
 
-import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef, CSP_NONCE, DOCUMENT } from '@angular/core';
+import { Component, Input, SimpleChanges, Renderer2, ChangeDetectorRef, ChangeDetectionStrategy, Inject, ContentChild, TemplateRef, ViewChild, Output, EventEmitter, ElementRef, CSP_NONCE, DOCUMENT, input, output } from '@angular/core';
 import { ICustomObjectValue, ServoyBaseComponent, ServoyPublicService } from '@servoy/public';
 import { GridStack, GridStackOptions, GridStackWidget, GridStackNode} from 'gridstack';
 import { GridstackComponent } from 'gridstack/dist/angular';
@@ -12,17 +12,17 @@ import { GridstackComponent } from 'gridstack/dist/angular';
 })
 export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
-    @Input() onLayoutChange: (e: Event, layout: Object) => void;
-    @Input() onWidgetClick: (e: Event, widgetId: string) => void;
+    onLayoutChange = input<(e: Event, layout: Object) => void>();
+    onWidgetClick = input<(e: Event, widgetId: string) => void>();
 
-    @Input() editable: boolean;
-    @Input() widgetMargin: margin;
-    @Input() rowSettings: rowSettings;
-    @Input() widgets: Widget[];
-    @Output() widgetsChange = new EventEmitter();
-    @Input() styleClass: string;
-    @Input() styleClassWidget: string;
-    @Input() styleClassWidgetEdit: string;
+    editable = input<boolean>(false);
+    widgetMargin = input<margin>();
+    rowSettings = input<rowSettings>();
+    widgets = input<Widget[]>([]);
+    widgetsChange = output<Widget[]>();
+    styleClass = input<string>('');
+    styleClassWidget = input<string>('');
+    styleClassWidgetEdit = input<string>('');
 
     @ViewChild(GridstackComponent) gridComp?: GridstackComponent;
     @ViewChild('element') gridElement?: ElementRef;
@@ -40,6 +40,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         minRow: 1,
         nonce: this.nonce,
         float: true,
+        animate: false,
         columnOpts: {
             layout: 'compact',
             breakpoints: [{w:576, c:3},{w:768, c:6},{w:992, c:9},{w:1200, c:12}]
@@ -53,12 +54,6 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     
     svyOnInit() {
         super.svyOnInit();
-        this.gridComp.grid.on('change', (e, nodes) => {
-            this.updateWidgetRefs(this.getCurrentLayout());
-            if(this.onLayoutChange) {
-                this.onLayoutChange(e, this.getCurrentLayout());
-            }
-        });
     }
     
     svyOnChanges( changes: SimpleChanges ) {
@@ -67,7 +62,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 const change = changes[property];
                 switch (property) {
                     case 'widgets':
-                        if(this.hasChangesForRerender(this.loadedWidgets, this.widgets)) {
+                        if(this.hasChangesForRerender(this.loadedWidgets, this.widgets())) {
                             if(this.widgetBuilder) {
                                 clearTimeout(this.widgetBuilder);
                             }
@@ -79,23 +74,26 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                         
                         break;
                     case 'editable':
-                        if(!this.editable) {
+                        if(!this.editable()) {
                             this.gridComp.grid.disable();
-                            this.widgetItemClass = this.styleClassWidget||"";
+                            this.widgetItemClass = this.styleClassWidget()||"";
                         } else {
                             this.gridComp.grid.enable();
-                            this.widgetItemClass = `${this.styleClassWidget||""} ${this.styleClassWidgetEdit||""}`;
+                            this.widgetItemClass = `${this.styleClassWidget()||""} ${this.styleClassWidgetEdit()||""}`;
                         }
                     break;
                     case 'rowSettings':
-                        if(this.rowSettings.rowHeight == -1) {
+                        if(this.rowSettings()?.rowHeight == -1) {
                             this.gridComp.grid.cellHeight('auto');
                         } else {
-                            this.gridComp.grid.cellHeight(this.rowSettings.rowHeight);
+                            this.gridComp.grid.cellHeight(this.rowSettings()?.rowHeight);
                         }
                     break;
                     case 'widgetMargin':
-                        this.gridComp.grid.margin(`${this.widgetMargin.top}px ${this.widgetMargin.right}px ${this.widgetMargin.bottom}px ${this.widgetMargin.left}px`);
+                        const margin = this.widgetMargin();
+                        if(margin) {
+                            this.gridComp.grid.margin(`${margin.top}px ${margin.right}px ${margin.bottom}px ${margin.left}px`);
+                        }
                     break
                 }
             }
@@ -115,10 +113,12 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     }
 
     private notifyChange() {
-		this.widgetsChange.emit(this.widgets);
+		this.widgetsChange.emit(this.widgets());
 	}
+    
     initWidgets() {
         //Clear UI before triggering hideForm
+        this.removeOnChangeEvents();
         this.gridComp.grid.removeAll(true, false);
         this.displayWidgets = [];
         let destroyPromises = this.loadedWidgets.map(widget => {
@@ -127,7 +127,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         Promise.all(destroyPromises).then(() => {
             this.loadedWidgets = [];
         }).then(() => {
-            let promises = this.widgets.map(widget => {
+            let promises = this.widgets().map(widget => {
                 if(!widget.form) {
                     return Promise.resolve(widget);
                 }
@@ -137,15 +137,20 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                 return this.servoyApi.formWillShow(widget.form, widget.relationName).then(() => {
                     const formCache = this.servoyPublic.getFormCacheByName(widget.form);
                     const newWidget: GridStackWidget = {};
+                    
                     if (formCache?.absolute) {
-                        newWidget.minH = Math.ceil(formCache.size.height / this.gridComp.grid.getCellHeight());
-                        newWidget.minW = Math.ceil(formCache.size.width / this.gridComp.grid.cellWidth());
-                        newWidget.h = widget.height || widget.minH || 1;
-                        newWidget.w = widget.width || widget.minW || 1;
+                        const cellHeight = this.gridComp.grid.getCellHeight();
+                        const cellWidth = this.gridComp.grid.cellWidth();
+                        
+                        newWidget.minH = Math.ceil(formCache.size.height / cellHeight);
+                        newWidget.minW = Math.ceil(formCache.size.width / cellWidth);
+                        newWidget.h = widget.height && widget.height > 0 ? widget.height : newWidget.minH || 1;
+                        newWidget.w = widget.width && widget.width > 0 ? widget.width : newWidget.minW || 1;
                     } else {
-                        newWidget.h = widget.height || 1;
-                        newWidget.w = widget.width || 1;
+                        newWidget.h = widget.height && widget.height > 0 ? widget.height : 1;
+                        newWidget.w = widget.width && widget.width > 0 ? widget.width : 1;
                     }
+                    
                     newWidget.y = widget.posY;
                     newWidget.x = widget.posX;
                     newWidget.id = widget.id;
@@ -158,11 +163,15 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
             });
 
             Promise.all(promises).then(() => {
-                //Resize all widgets that have resizeToContent enabled
-                this.resizeToContentWidgetsToFit();
-                if(this.onLayoutChange) {
-                    this.onLayoutChange(this.createJSEvent(), this.getCurrentLayout());
-                }
+                this.registerOnChangeEvents();
+                
+                // Small delay to fix the browser Refresh issue (not rendering the correct size)
+                setTimeout(() => {
+                    this.resizeToContentWidgetsToFit();
+                    if(this.onLayoutChange()) {
+                        this.onLayoutChange()(this.createJSEvent(), this.getCurrentLayout());
+                    }
+                }, 50); 
             });
         })
     }
@@ -173,26 +182,28 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         return event;
     }
 
-    private updateWidgetRefs(items: GridStackNode[]|WidgetLayout[]) {
+    private updateWidgetRefs(items: WidgetLayout[]) {
         items.forEach(item => {
-            let matchingWidget = this.widgets?.find(widget => widget.id === item.id);
+            let matchingWidget = this.widgets()?.find(widget => widget.id === item.id);
             if(matchingWidget) {
-                matchingWidget.posX = this.getDocumentAttribute(item.id, 'gs-x') || item.x || item.posX;
-                matchingWidget.posY = this.getDocumentAttribute(item.id, 'gs-y') || item.y || item.posY;
-                matchingWidget.width = this.getDocumentAttribute(item.id, 'gs-w') || item.w || item.width || item.minW;
-                matchingWidget.height = this.getDocumentAttribute(item.id, 'gs-h') || item.h || item.height || item.minH;
+                matchingWidget.posX = item.posX;
+                matchingWidget.posY = item.posY;
+                matchingWidget.width = item.width || item.minW;
+                matchingWidget.height = item.height || item.minH;
             }
         });
+
         this.notifyChange();
     }
 
     public onWidgetClickHandler(e: Event, widgetId: string) {
-        if(this.onWidgetClick) {
-            this.onWidgetClick(e, widgetId);
+        if(this.onWidgetClick()) {
+            this.onWidgetClick()(e, widgetId);
         }
     }
+
     public getProperty(renderWidget: GridStackWidget, propertyName:string) {
-        let matchingWidget = this.widgets?.find(widget => widget.id === renderWidget.id);
+        let matchingWidget = this.widgets()?.find(widget => widget.id === renderWidget.id);
 		if (matchingWidget && matchingWidget[propertyName]) {
 			return matchingWidget[propertyName];
 		} else {
@@ -205,45 +216,42 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
       }
 
     public getCurrentLayout():WidgetLayout[] {
-
-        let returnLayout:WidgetLayout[] = [];
-        /**@type {Array<{x: Number, y: Number, w: Number, h: Number, id: string}>} */
-        let currentLayout = JSON.parse(JSON.stringify(this.gridComp.grid.save(false)));
-        currentLayout.forEach(widget => {
-            returnLayout.push({
-                id: widget.id,
-                posX: this.getDocumentAttribute(widget.id, 'gs-x') || widget.x,
-                posY: this.getDocumentAttribute(widget.id, 'gs-y') || widget.y,
-                width: this.getDocumentAttribute(widget.id, 'gs-w') || widget.w,
-                height: this.getDocumentAttribute(widget.id, 'gs-h') || widget.h,
-                minH: widget.minH,
-                minW: widget.minW,
-                noMove: !!widget.noMove,
-                noResize: !!widget.noResize,
-                form: this.getProperty(widget, 'form')
-            })
-            
-        })
-        return returnLayout
+        return this.gridComp.gridstackItems?.map(item => ({
+            id: item.options.id,
+            posX: item.options.x,
+            posY: item.options.y,
+            width: item.options.w,
+            height: item.options.h,
+            minH: item.options.minH,
+            minW: item.options.minW,
+            noMove: item.options.noMove,
+            noResize: item.options.noResize,
+            form: this.getProperty(item.options, 'form')
+        })) || [];
     }
 
 
     public resizeToContentWidgetsToFit() {
         this.gridComp.grid.getGridItems().forEach(widget => {
-            if(this.loadedWidgets.find(w => w.id === widget.id)?.sizeToContent) {
+            const loadedWidget = this.loadedWidgets.find(w => w.id === widget.id);
+            if(loadedWidget?.sizeToContent) {
                 this.gridComp.grid.resizeToContent(widget);
             }
         })
         this.updateWidgetRefs(this.getCurrentLayout());
     }
 
-    private getDocumentAttribute(elementId, attibute) {
-        const element = document.getElementById(elementId);
-        if (!element) 
-            return null;
+    private registerOnChangeEvents() {
+        this.gridComp.grid.on('change', (e, nodes) => {
+            this.updateWidgetRefs(this.getCurrentLayout());
+            if(this.onLayoutChange()) {
+                this.onLayoutChange()(e, this.getCurrentLayout());
+            }
+        });
+    }
 
-        const gsIntAttribute = element.getAttribute(attibute);
-        return gsIntAttribute ? parseInt(gsIntAttribute, 10) : null;
+    private removeOnChangeEvents() {
+        this.gridComp.grid.off('change');
     }
     
     private hasChangesForRerender(objA: WidgetLayout[], objB: WidgetLayout[]): boolean {
