@@ -165,13 +165,18 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
             Promise.all(promises).then(() => {
                 this.registerOnChangeEvents();
                 
-                // Small delay to fix the browser Refresh issue (not rendering the correct size)
-                setTimeout(() => {
+                //Wait until all widget contents in Servoy are rendered (listForms / Aggrid)
+                this.waitForWidgetContentReady().then(() => {
                     this.resizeToContentWidgetsToFit();
+                    //Trigger resize event so that servoy also knows the correct form sizes
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    }, 100);  
+                    
                     if(this.onLayoutChange()) {
                         this.onLayoutChange()(this.createJSEvent(), this.getCurrentLayout());
                     }
-                }, 50); 
+                });
             });
         })
     }
@@ -180,6 +185,54 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
         const event = this.document.createEvent('MouseEvents');
         event.initMouseEvent('click', false, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
         return event;
+    }
+
+    private waitForWidgetContentReady(): Promise<void> {
+        //Workaround for issue where widgets with dynamic content (like listforms or aggrid) are not fully rendered, in that case gridstack measures wrong height
+        return new Promise((resolve) => {
+            let lastTotalHeight = 0;
+            let stableCount = 0;
+            let maxChecks = 15;
+            
+            const check = () => {
+                try {
+                    maxChecks--;
+                    if (maxChecks <= 0) {
+                        resolve(); // Give up after max checks
+                        return;
+                    }
+                    // If no widgets, resolve immediately
+                    if(this.gridComp.grid.getGridItems().length === 0) {
+                        resolve();
+                        return;
+                    }
+                    // Get total height of all containers
+                    const totalHeight = this.gridComp.grid.getGridItems()
+                        .reduce((sum, item) => {
+                            const container = item.querySelector(`#${item.id}-container`);
+                            return sum + (container?.scrollHeight || 0);
+                        }, 0);
+                    
+                    // Height is stable if it hasn't changed
+                    if (totalHeight === lastTotalHeight && totalHeight > 100) {
+                        stableCount++;
+                        if (stableCount >= 2) { // 2 consecutive stable checks
+                            resolve();
+                            return;
+                        }
+                    } else {
+                        stableCount = 0; // Reset if height changed
+                    }
+                    
+                    lastTotalHeight = totalHeight;
+                    setTimeout(check, 100);
+                } catch (e) {
+                    resolve();
+                }
+            };
+            
+            setTimeout(check, 100);
+        });
     }
 
     private updateWidgetRefs(items: WidgetLayout[]) {

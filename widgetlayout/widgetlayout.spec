@@ -66,7 +66,8 @@
             "id"                        : { "type": "string" },
             "sizeToContent"             : { "type": "boolean", "default": false },
             "noResize"                  : { "type": "boolean", "default": false, "tags": {"doc": "Disable widget resizing when in edit mode"}},
-            "noMove"                    : { "type": "boolean", "default": false, "tags": {"doc": "Disable widget moving when in edit mode"}}
+            "noMove"                    : { "type": "boolean", "default": false, "tags": {"doc": "Disable widget moving when in edit mode"}},
+            "gridStackWidget"           : { "type": "object", "tags": {"scope" : "private"} } 
 		},
         "margin": {
             "top"   : { "type": "int", "default": 10, "tags": {"scope": "design"} },
