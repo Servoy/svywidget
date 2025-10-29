@@ -260,7 +260,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 		if (matchingWidget && matchingWidget[propertyName]) {
 			return matchingWidget[propertyName];
 		} else {
-			return '';
+			return null;
 		}
     }
 
@@ -284,7 +284,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
             minW: item.options.minW,
             noMove: item.options.noMove,
             noResize: item.options.noResize,
-            form: this.getProperty(item.options, 'form')
+            form: this.getProperty(item.el, 'form')
         })) || [];
     }
 
