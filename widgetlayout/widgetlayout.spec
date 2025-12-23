@@ -23,6 +23,8 @@
         "resizeToContentWidgetsToFit": {
             "async": true,
             "delayUntilFormLoads": true
+        },"removeAllWidgets": {
+            "delayUntilFormLoads": true
         }
     },
     "handlers": {

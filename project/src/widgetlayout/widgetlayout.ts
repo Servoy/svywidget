@@ -117,14 +117,7 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
 
     initWidgets() {
         //Clear UI before triggering hideForm
-        this.removeOnChangeEvents();
-        this.gridComp.grid.removeAll(true, false);
-        let destroyPromises = Array.from(this.loadedWidgetsMap.values()).map(widget => {
-            this.servoyApi.hideForm(widget.form, widget.relationName)
-        });
-        Promise.all(destroyPromises).then(() => {
-            this.loadedWidgetsMap.clear();
-        }).then(() => {
+        this.removeAllWidgets();
             let promises = this.widgets().map(widget => {
                 if(!widget.form) {
                     return Promise.resolve(widget);
@@ -178,7 +171,6 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
                     }
                 });
             });
-        })
     }
     
     private createJSEvent() {
@@ -190,48 +182,34 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     private waitForWidgetContentReady(): Promise<void> {
         //Workaround for issue where widgets with dynamic content (like listforms or aggrid) are not fully rendered, in that case gridstack measures wrong height
         return new Promise((resolve) => {
-            let lastTotalHeight = 0;
-            let stableCount = 0;
-            let maxChecks = 15;
-            
-            const check = () => {
-                try {
-                    maxChecks--;
-                    if (maxChecks <= 0) {
-                        resolve(); // Give up after max checks
-                        return;
-                    }
-                    // If no widgets, resolve immediately
-                    if(this.gridComp.grid.getGridItems().length === 0) {
-                        resolve();
-                        return;
-                    }
-                    // Get total height of all containers
-                    const totalHeight = this.gridComp.grid.getGridItems()
-                        .reduce((sum, item) => {
-                            const container = item.querySelector(`#${item.id}-container`);
-                            return sum + (container?.scrollHeight || 0);
-                        }, 0);
+            let resizeTimeout: any;
+            const items = this.gridComp.grid.getGridItems();
                     
-                    // Height is stable if it hasn't changed
-                    if (totalHeight === lastTotalHeight && totalHeight > 100) {
-                        stableCount++;
-                        if (stableCount >= 2) { // 2 consecutive stable checks
+            if (items.length === 0) {
                             resolve();
                             return;
                         }
-                    } else {
-                        stableCount = 0; // Reset if height changed
-                    }
                     
-                    lastTotalHeight = totalHeight;
-                    setTimeout(check, 100);
-                } catch (e) {
+            const resizeObserver = new ResizeObserver(() => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    resizeObserver.disconnect();
                     resolve();
-                }
-            };
+                }, 100); // Wait 100ms after last resize
+            });
             
-            setTimeout(check, 100);
+            items.forEach(item => {
+                const container = item.querySelector(`#${item.id}-container`);
+                if (container) {
+                    resizeObserver.observe(container);
+                }
+            });
+            
+            // Safety timeout
+            setTimeout(() => {
+                resizeObserver.disconnect();
+                resolve();
+            }, 2000);
         });
     }
 
@@ -271,6 +249,19 @@ export class Widgetlayout extends ServoyBaseComponent<HTMLDivElement> {
     // Expose display widgets from Map as array for template iteration
     public get displayWidgets(): GridStackWidget[] {
         return Array.from(this.loadedWidgetsMap.values()).map(widget => widget.gridStackWidget).filter(Boolean);
+    }
+
+    public removeAllWidgets() {
+        this.removeOnChangeEvents();
+        this.gridComp.grid.removeAll(true, false);
+        this.cdRef.detectChanges();
+        let destroyPromises = Array.from(this.loadedWidgetsMap.values()).map(widget => {
+            this.servoyApi.hideForm(widget.form, widget.relationName)
+        });
+        Promise.all(destroyPromises).then(() => {
+            this.loadedWidgetsMap.clear();
+            this.notifyChange();
+        });
     }
 
     public getCurrentLayout():WidgetLayout[] {
